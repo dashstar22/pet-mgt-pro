@@ -2,6 +2,8 @@ package com.petmgt.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.petmgt.dto.ApiResponse;
+import com.petmgt.dto.PageResponse;
 import com.petmgt.entity.Breed;
 import com.petmgt.entity.Pet;
 import com.petmgt.entity.PetImage;
@@ -10,26 +12,16 @@ import com.petmgt.mapper.PetImageMapper;
 import com.petmgt.mapper.PetMapper;
 import com.petmgt.service.FileStorageService;
 import com.petmgt.util.SecurityUtil;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.List;
 
-@Controller
-@RequestMapping("/admin/pets")
+@RestController
+@RequestMapping("/api/admin/pets")
 public class PetManageController {
-
-    private static final Logger log = LoggerFactory.getLogger(PetManageController.class);
 
     private final PetMapper petMapper;
     private final BreedMapper breedMapper;
@@ -37,8 +29,8 @@ public class PetManageController {
     private final FileStorageService fileStorageService;
 
     public PetManageController(PetMapper petMapper, BreedMapper breedMapper,
-                               PetImageMapper petImageMapper,
-                               FileStorageService fileStorageService) {
+                                PetImageMapper petImageMapper,
+                                FileStorageService fileStorageService) {
         this.petMapper = petMapper;
         this.breedMapper = breedMapper;
         this.petImageMapper = petImageMapper;
@@ -46,93 +38,99 @@ public class PetManageController {
     }
 
     @GetMapping
-    public String list(@RequestParam(defaultValue = "1") int page,
-                       @RequestParam(defaultValue = "10") int size,
-                       @RequestParam(required = false) String name,
-                       @RequestParam(required = false) Long breedId,
-                       @RequestParam(required = false) String status,
-                       Model model) {
-        Page<Pet> petPage = new Page<>(page, size);
+    public ApiResponse<PageResponse<Pet>> list(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) Long breedId,
+            @RequestParam(required = false) String status) {
+        Page<Pet> pageParam = new Page<>(page, size);
         LambdaQueryWrapper<Pet> wrapper = new LambdaQueryWrapper<>();
-        if (name != null && !name.isEmpty()) {
-            wrapper.like(Pet::getName, name);
-        }
-        if (breedId != null) {
-            wrapper.eq(Pet::getBreedId, breedId);
-        }
-        if (status != null && !status.isEmpty()) {
-            wrapper.eq(Pet::getStatus, status);
-        }
+        if (name != null && !name.isEmpty()) wrapper.like(Pet::getName, name);
+        if (breedId != null) wrapper.eq(Pet::getBreedId, breedId);
+        if (status != null && !status.isEmpty()) wrapper.eq(Pet::getStatus, status);
         wrapper.orderByDesc(Pet::getCreatedAt);
-        Page<Pet> result = petMapper.selectPage(petPage, wrapper);
-
-        for (Pet pet : result.getRecords()) {
-            Breed breed = breedMapper.selectById(pet.getBreedId());
-            if (breed != null) {
-                pet.setBreedName(breed.getBreedName());
-            }
+        Page<Pet> result = petMapper.selectPage(pageParam, wrapper);
+        for (Pet p : result.getRecords()) {
+            Breed b = breedMapper.selectById(p.getBreedId());
+            if (b != null) p.setBreedName(b.getBreedName());
         }
-
-        model.addAttribute("title", "宠物管理");
-        model.addAttribute("page", result);
-        model.addAttribute("breeds", breedMapper.selectList(null));
-        model.addAttribute("name", name);
-        model.addAttribute("breedId", breedId);
-        model.addAttribute("status", status);
-        return "admin/pets";
+        PageResponse<Pet> resp = new PageResponse<>(
+                result.getRecords(), result.getTotal(), (int) result.getCurrent(), (int) result.getSize());
+        return ApiResponse.success(resp);
     }
 
-    @GetMapping("/create")
-    public String createForm(Model model) {
-        model.addAttribute("title", "发布宠物");
-        model.addAttribute("pet", new Pet());
-        model.addAttribute("breeds", breedMapper.selectList(null));
-        model.addAttribute("isEdit", false);
-        model.addAttribute("petType", "");
-        return "admin/pet-form";
-    }
+    @PostMapping
+    public ApiResponse<Void> create(
+            @RequestParam("name") String name,
+            @RequestParam("breedId") Long breedId,
+            @RequestParam("gender") String gender,
+            @RequestParam("age") Integer age,
+            @RequestParam(value = "weight", required = false) Double weight,
+            @RequestParam("healthStatus") String healthStatus,
+            @RequestParam(value = "vaccineStatus", required = false) String vaccineStatus,
+            @RequestParam(value = "sterilizationStatus", required = false) String sterilizationStatus,
+            @RequestParam("personality") String personality,
+            @RequestParam(value = "adoptionRequirement", required = false) String adoptionRequirement,
+            @RequestParam(value = "images", required = false) List<MultipartFile> images,
+            @RequestParam(value = "coverIndex", defaultValue = "0") Integer coverIndex) throws IOException {
 
-    @PostMapping("/create")
-    public String create(Pet pet,
-                         @RequestParam(value = "images", required = false) List<MultipartFile> images,
-                         @RequestParam(value = "coverIndex", required = false) Integer coverIndex,
-                         RedirectAttributes redirectAttributes) {
+        Pet pet = new Pet();
+        pet.setName(name);
+        pet.setBreedId(breedId);
+        pet.setGender(gender);
+        pet.setAge(age);
+        pet.setWeight(weight != null ? new BigDecimal(weight) : null);
+        pet.setHealthStatus(healthStatus);
+        pet.setVaccineStatus(vaccineStatus);
+        pet.setSterilizationStatus(sterilizationStatus);
+        pet.setPersonality(personality);
+        pet.setAdoptionRequirement(adoptionRequirement);
         pet.setStatus("available");
         pet.setCreatedBy(SecurityUtil.getCurrentUser().getId());
         petMapper.insert(pet);
-        if (images != null) {
+
+        if (images != null && !images.isEmpty()) {
             saveImages(pet.getId(), images, coverIndex);
         }
-        redirectAttributes.addFlashAttribute("success", "宠物发布成功");
-        return "redirect:/admin/pets";
+        return ApiResponse.success("发布成功", null);
     }
 
-    @GetMapping("/{id}/edit")
-    public String editForm(@PathVariable Long id, Model model) {
+    @PutMapping("/{id}")
+    public ApiResponse<Void> update(
+            @PathVariable Long id,
+            @RequestParam("name") String name,
+            @RequestParam("breedId") Long breedId,
+            @RequestParam("gender") String gender,
+            @RequestParam("age") Integer age,
+            @RequestParam(value = "weight", required = false) Double weight,
+            @RequestParam("healthStatus") String healthStatus,
+            @RequestParam(value = "vaccineStatus", required = false) String vaccineStatus,
+            @RequestParam(value = "sterilizationStatus", required = false) String sterilizationStatus,
+            @RequestParam("personality") String personality,
+            @RequestParam(value = "adoptionRequirement", required = false) String adoptionRequirement,
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "images", required = false) List<MultipartFile> images,
+            @RequestParam(value = "coverIndex", defaultValue = "0") Integer coverIndex,
+            @RequestParam(value = "deleteImageIds", required = false) List<Long> deleteImageIds) throws IOException {
+
         Pet pet = petMapper.selectById(id);
         if (pet == null) {
-            return "redirect:/admin/pets";
+            return ApiResponse.error(404, "宠物不存在");
         }
-        Breed breed = breedMapper.selectById(pet.getBreedId());
-        model.addAttribute("petType", breed != null ? breed.getPetType() : "");
-        List<PetImage> images = petImageMapper.selectList(
-            new LambdaQueryWrapper<PetImage>().eq(PetImage::getPetId, id));
-        model.addAttribute("title", "编辑宠物");
-        model.addAttribute("pet", pet);
-        model.addAttribute("breeds", breedMapper.selectList(null));
-        model.addAttribute("images", images);
-        model.addAttribute("isEdit", true);
-        return "admin/pet-form";
-    }
-
-    @PostMapping("/{id}/edit")
-    public String edit(@PathVariable Long id, Pet pet,
-                       @RequestParam(value = "images", required = false) List<MultipartFile> images,
-                       @RequestParam(value = "coverIndex", required = false) Integer coverIndex,
-                       @RequestParam(value = "deleteImageIds", required = false) List<Long> deleteImageIds,
-                       RedirectAttributes redirectAttributes) {
-        pet.setId(id);
+        pet.setName(name);
+        pet.setBreedId(breedId);
+        pet.setGender(gender);
+        pet.setAge(age);
+        pet.setWeight(weight != null ? new BigDecimal(weight) : null);
+        pet.setHealthStatus(healthStatus);
+        pet.setVaccineStatus(vaccineStatus);
+        pet.setSterilizationStatus(sterilizationStatus);
+        pet.setPersonality(personality);
+        pet.setAdoptionRequirement(adoptionRequirement);
+        if (status != null) pet.setStatus(status);
         petMapper.updateById(pet);
+
         if (deleteImageIds != null) {
             for (Long imageId : deleteImageIds) {
                 PetImage img = petImageMapper.selectById(imageId);
@@ -145,50 +143,31 @@ public class PetManageController {
         if (images != null && !images.isEmpty()) {
             saveImages(id, images, coverIndex);
         }
-        redirectAttributes.addFlashAttribute("success", "宠物更新成功");
-        return "redirect:/admin/pets";
+        return ApiResponse.success("更新成功", null);
     }
 
-    @PostMapping("/{id}/delete")
-    public String delete(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> delete(@PathVariable Long id) {
         List<PetImage> images = petImageMapper.selectList(
-            new LambdaQueryWrapper<PetImage>().eq(PetImage::getPetId, id));
+                new LambdaQueryWrapper<PetImage>().eq(PetImage::getPetId, id));
         for (PetImage img : images) {
             fileStorageService.delete(img.getImageUrl());
+            petImageMapper.deleteById(img.getId());
         }
-        petImageMapper.delete(new LambdaQueryWrapper<PetImage>().eq(PetImage::getPetId, id));
         petMapper.deleteById(id);
-        redirectAttributes.addFlashAttribute("success", "宠物已删除");
-        return "redirect:/admin/pets";
+        return ApiResponse.success("删除成功", null);
     }
 
-    private void saveImages(Long petId, List<MultipartFile> images, Integer coverIndex) {
+    private void saveImages(Long petId, List<MultipartFile> images, Integer coverIndex) throws java.io.IOException {
         for (int i = 0; i < images.size(); i++) {
             MultipartFile file = images.get(i);
             if (file.isEmpty()) continue;
-            try {
-                String fileName = fileStorageService.store(file);
-                PetImage petImage = new PetImage();
-                petImage.setPetId(petId);
-                petImage.setImageUrl(fileName);
-                petImage.setIsCover(coverIndex != null && coverIndex == i + 1 ? 1 : 0);
-                petImageMapper.insert(petImage);
-            } catch (Exception e) {
-                log.error("Failed to save image for pet {}: {}", petId, e.getMessage(), e);
-            }
-        }
-
-        if (coverIndex == null) {
-            List<PetImage> existing = petImageMapper.selectList(
-                new LambdaQueryWrapper<PetImage>().eq(PetImage::getPetId, petId));
-            if (!existing.isEmpty()) {
-                boolean hasCover = existing.stream().anyMatch(img -> img.getIsCover() == 1);
-                if (!hasCover) {
-                    PetImage first = existing.get(0);
-                    first.setIsCover(1);
-                    petImageMapper.updateById(first);
-                }
-            }
+            String filename = fileStorageService.store(file);
+            PetImage petImage = new PetImage();
+            petImage.setPetId(petId);
+            petImage.setImageUrl(filename);
+            petImage.setIsCover(i == coverIndex ? 1 : 0);
+            petImageMapper.insert(petImage);
         }
     }
 }
