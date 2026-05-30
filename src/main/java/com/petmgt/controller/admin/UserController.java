@@ -2,26 +2,20 @@ package com.petmgt.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.petmgt.dto.ApiResponse;
+import com.petmgt.dto.PageResponse;
 import com.petmgt.entity.User;
 import com.petmgt.mapper.RoleMapper;
 import com.petmgt.mapper.UserMapper;
 import com.petmgt.util.SecurityUtil;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-@Controller
-@RequestMapping("/admin/users")
+@RestController
+@RequestMapping("/api/admin/users")
 public class UserController {
 
     private final UserMapper userMapper;
@@ -36,99 +30,85 @@ public class UserController {
     }
 
     @GetMapping
-    public String list(@RequestParam(defaultValue = "1") int page,
-                       @RequestParam(defaultValue = "10") int size,
-                       Model model) {
-        Page<User> userPage = new Page<>(page, size);
-        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<User>()
-            .orderByDesc(User::getCreatedAt);
-        Page<User> result = userMapper.selectPage(userPage, wrapper);
-
-        Map<Long, List<String>> roleNames = new LinkedHashMap<>();
-        for (User user : result.getRecords()) {
-            user.setPassword(null);
-            roleNames.put(user.getId(), roleMapper.findRoleNamesByUserId(user.getId()));
-        }
-
-        model.addAttribute("title", "用户管理");
-        model.addAttribute("page", result);
-        model.addAttribute("roleNames", roleNames);
-        return "admin/users";
+    public ApiResponse<PageResponse<User>> list(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Page<User> pageParam = new Page<>(page, size);
+        Page<User> result = userMapper.selectPage(pageParam,
+                new LambdaQueryWrapper<User>().orderByDesc(User::getCreatedAt));
+        result.getRecords().forEach(u -> u.setPassword(null));
+        PageResponse<User> resp = new PageResponse<>(
+                result.getRecords(), result.getTotal(), (int) result.getCurrent(), (int) result.getSize());
+        return ApiResponse.success(resp);
     }
 
-    @GetMapping("/create")
-    public String createForm(Model model) {
-        model.addAttribute("title", "新增用户");
-        model.addAttribute("user", new User());
-        model.addAttribute("allRoles", roleMapper.selectList(null));
-        model.addAttribute("isEdit", false);
-        return "admin/user-form";
+    @GetMapping("/{id}")
+    public ApiResponse<User> getById(@PathVariable Long id) {
+        User user = userMapper.selectById(id);
+        if (user != null) user.setPassword(null);
+        return ApiResponse.success(user);
     }
 
-    @PostMapping("/create")
-    public String create(User user, @RequestParam(required = false) List<Long> roleIds,
-                         RedirectAttributes redirectAttributes) {
-        if (userMapper.findByUsername(user.getUsername()) != null) {
-            redirectAttributes.addFlashAttribute("error", "用户名已存在");
-            return "redirect:/admin/users/create";
+    @PostMapping
+    public ApiResponse<Void> create(@RequestBody Map<String, Object> body) {
+        String username = (String) body.get("username");
+        String password = (String) body.get("password");
+        String email = (String) body.get("email");
+        @SuppressWarnings("unchecked")
+        List<Integer> roleIds = (List<Integer>) body.get("roleIds");
+
+        if (username == null || password == null) {
+            return ApiResponse.error(400, "用户名和密码不能为空");
         }
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        user.setEnabled(user.getEnabled() != null ? user.getEnabled() : 1);
+        User existing = userMapper.findByUsername(username);
+        if (existing != null) {
+            return ApiResponse.error(400, "用户名已存在");
+        }
+        User user = new User();
+        user.setUsername(username);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setEmail(email);
+        user.setEnabled(1);
         userMapper.insert(user);
         if (roleIds != null) {
-            for (Long roleId : roleIds) {
-                roleMapper.insertUserRole(user.getId(), roleId);
+            for (Integer roleId : roleIds) {
+                roleMapper.insertUserRole(user.getId(), roleId.longValue());
             }
         }
-        redirectAttributes.addFlashAttribute("success", "用户创建成功");
-        return "redirect:/admin/users";
+        return ApiResponse.success("创建成功", null);
     }
 
-    @GetMapping("/{id}/edit")
-    public String editForm(@PathVariable Long id, Model model) {
+    @PutMapping("/{id}")
+    public ApiResponse<Void> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        User currentUser = SecurityUtil.getCurrentUser();
+        if (currentUser != null && currentUser.getId().equals(id)) {
+            return ApiResponse.error(400, "不能编辑自己的账号");
+        }
         User user = userMapper.selectById(id);
         if (user == null) {
-            return "redirect:/admin/users";
+            return ApiResponse.error(404, "用户不存在");
         }
-        user.setPassword(null);
-        List<String> currentRoles = roleMapper.findRoleNamesByUserId(id);
-        model.addAttribute("title", "编辑用户");
-        model.addAttribute("user", user);
-        model.addAttribute("allRoles", roleMapper.selectList(null));
-        model.addAttribute("currentRoleNames", currentRoles);
-        model.addAttribute("isEdit", true);
-        return "admin/user-form";
-    }
-
-    @PostMapping("/{id}/edit")
-    public String edit(@PathVariable Long id, User user,
-                       @RequestParam(required = false) List<Long> roleIds,
-                       RedirectAttributes redirectAttributes) {
-        User currentUser = SecurityUtil.getCurrentUser();
-        if (currentUser != null && currentUser.getId().equals(id)) {
-            redirectAttributes.addFlashAttribute("error", "不能编辑自己的账号");
-            return "redirect:/admin/users/" + id + "/edit";
+        if (body.containsKey("email")) {
+            user.setEmail((String) body.get("email"));
         }
-        user.setId(id);
-        if (user.getPassword() != null && !user.getPassword().isEmpty()) {
-            user.setPassword(passwordEncoder.encode(user.getPassword()));
-        } else {
-            user.setPassword(null);
+        if (body.containsKey("enabled")) {
+            user.setEnabled(((Number) body.get("enabled")).intValue());
+        }
+        if (body.containsKey("password") && body.get("password") != null
+                && !((String) body.get("password")).isEmpty()) {
+            user.setPassword(passwordEncoder.encode((String) body.get("password")));
         }
         userMapper.updateById(user);
-        redirectAttributes.addFlashAttribute("success", "用户更新成功");
-        return "redirect:/admin/users";
+        return ApiResponse.success("更新成功", null);
     }
 
-    @PostMapping("/{id}/delete")
-    public String delete(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> delete(@PathVariable Long id) {
         User currentUser = SecurityUtil.getCurrentUser();
         if (currentUser != null && currentUser.getId().equals(id)) {
-            redirectAttributes.addFlashAttribute("error", "不能删除自己的账号");
-            return "redirect:/admin/users";
+            return ApiResponse.error(400, "不能删除自己的账号");
         }
         userMapper.deleteById(id);
-        redirectAttributes.addFlashAttribute("success", "用户已删除");
-        return "redirect:/admin/users";
+        return ApiResponse.success("删除成功", null);
     }
 }

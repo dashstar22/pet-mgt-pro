@@ -1,18 +1,21 @@
 package com.petmgt.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.petmgt.dto.ApiResponse;
 import com.petmgt.entity.Application;
 import com.petmgt.entity.Pet;
 import com.petmgt.mapper.ApplicationMapper;
 import com.petmgt.mapper.PetMapper;
 import com.petmgt.mapper.UserMapper;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-@Controller
-@RequestMapping("/admin")
+import java.util.HashMap;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/admin")
 public class AdminController {
 
     private final UserMapper userMapper;
@@ -26,17 +29,17 @@ public class AdminController {
         this.applicationMapper = applicationMapper;
     }
 
-    @GetMapping
-    public String index(Model model) {
-        model.addAttribute("title", "后台管理");
-        model.addAttribute("totalUsers", userMapper.selectCount(null));
-        model.addAttribute("totalPets", petMapper.selectCount(null));
-        model.addAttribute("availablePets", petMapper.selectCount(
-            new LambdaQueryWrapper<Pet>().eq(Pet::getStatus, "available")));
-        model.addAttribute("adoptedPets", petMapper.selectCount(
-            new LambdaQueryWrapper<Pet>().eq(Pet::getStatus, "adopted")));
-        model.addAttribute("pendingApps", applicationMapper.selectCount(
-            new LambdaQueryWrapper<Application>().eq(Application::getStatus, "pending")));
-        return "admin/index";
+    @GetMapping("/stats")
+    public ApiResponse<Map<String, Object>> stats() {
+        Map<String, Object> data = new HashMap<>();
+        data.put("totalUsers", userMapper.selectCount(null));
+        data.put("totalPets", petMapper.selectCount(null));
+        data.put("availablePets", petMapper.selectCount(
+                new LambdaQueryWrapper<Pet>().eq(Pet::getStatus, "available")));
+        data.put("adoptedPets", petMapper.selectCount(
+                new LambdaQueryWrapper<Pet>().eq(Pet::getStatus, "adopted")));
+        data.put("pendingApplications", applicationMapper.selectCount(
+                new LambdaQueryWrapper<Application>().eq(Application::getStatus, "pending")));
+        return ApiResponse.success(data);
     }
 }
