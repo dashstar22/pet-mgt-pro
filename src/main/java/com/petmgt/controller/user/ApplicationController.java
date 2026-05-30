@@ -12,7 +12,7 @@ import com.petmgt.service.ApplicationService;
 import com.petmgt.util.SecurityUtil;
 import org.springframework.web.bind.annotation.*;
 
-@RestController
+@RestController("userApplicationController")
 @RequestMapping("/api/applications")
 public class ApplicationController {
 

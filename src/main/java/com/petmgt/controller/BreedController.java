@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@RestController
+@RestController("publicBreedController")
 @RequestMapping("/api/breeds")
 public class BreedController {
 

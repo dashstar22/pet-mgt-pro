@@ -6,7 +6,7 @@ import com.petmgt.entity.Breed;
 import com.petmgt.service.BreedService;
 import org.springframework.web.bind.annotation.*;
 
-@RestController
+@RestController("adminBreedController")
 @RequestMapping("/api/admin/breeds")
 public class BreedController {
 
