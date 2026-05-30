@@ -15,12 +15,29 @@ public class SecurityUtil {
         SecurityUtil.userMapper = userMapper;
     }
 
+    /**
+     * Get the currently authenticated user.
+     * With JWT auth, the principal is the userId (Long).
+     * Falls back to username-based lookup for non-JWT Authentication types.
+     */
     public static User getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) {
             return null;
         }
+
+        Object principal = auth.getPrincipal();
+
+        // JWT auth: principal is userId (Long)
+        if (principal instanceof Long userId) {
+            return userMapper.selectById(userId);
+        }
+
+        // Fallback: principal might be a String (username) or UserDetails
         String username = auth.getName();
+        if ("anonymousUser".equals(username)) {
+            return null;
+        }
         return userMapper.findByUsername(username);
     }
 }
