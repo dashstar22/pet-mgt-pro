@@ -1,0 +1,117 @@
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "Microsoft YaHei, SimHei, Arial",
+    "primaryTextColor": "#263238",
+    "lineColor": "#90A4AE",
+    "clusterBkg": "#FAFAFA",
+    "clusterBorder": "#CFD8DC"
+  },
+  "flowchart": {
+    "curve": "basis",
+    "nodeSpacing": 22,
+    "rankSpacing": 36,
+    "padding": 14
+  }
+}}%%
+
+graph TB
+
+    %% ========== 样式定义 ==========
+    classDef actorStyle fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#0D47A1
+    classDef presentStyle fill:#E8F5E9,stroke:#43A047,stroke-width:1.5px,color:#1B5E20
+    classDef securityStyle fill:#FFF3E0,stroke:#FB8C00,stroke-width:1.5px,color:#E65100
+    classDef controllerStyle fill:#F3E5F5,stroke:#8E24AA,stroke-width:1.5px,color:#4A148C
+    classDef serviceStyle fill:#FFFDE7,stroke:#FBC02D,stroke-width:1.5px,color:#5D4037
+    classDef dataStyle fill:#FCE4EC,stroke:#D81B60,stroke-width:1.5px,color:#880E4F
+    classDef dbStyle fill:#E1F5FE,stroke:#0288D1,stroke-width:2px,color:#01579B
+    classDef aiStyle fill:#FBE9E7,stroke:#F4511E,stroke-width:2px,color:#BF360C
+    classDef fileStyle fill:#E8F5E9,stroke:#388E3C,stroke-width:2px,color:#1B5E20
+
+    %% ========== 用户入口 ==========
+    USER(["用户 / 管理员"]):::actorStyle
+
+    %% ========== 第1层：表示层 ==========
+    subgraph L1 ["1. 表示层 - Thymeleaf 模板引擎"]
+        direction TB
+        P1["公共页面<br/>首页 / 宠物列表 / 登录 / 注册"]:::presentStyle
+        P2["用户端页面<br/>申请管理 / AI智能匹配 / AI智能问答"]:::presentStyle
+        P3["管理端页面<br/>仪表盘 / 用户管理 / 品种 / 宠物 / 申请管理"]:::presentStyle
+    end
+
+    %% ========== 第2层：安全层 ==========
+    subgraph L2 ["2. 安全层 - Spring Security"]
+        direction TB
+        SEC1["匿名访问<br/>/ , /pets/** , /auth/**"]:::securityStyle
+        SEC2["USER 角色<br/>/user/** , 个人中心 , AI功能"]:::securityStyle
+        SEC3["ADMIN 角色<br/>/admin/** , 后台管理全部功能"]:::securityStyle
+    end
+
+    %% ========== 第3层：控制层 ==========
+    subgraph L3 ["3. 控制层 - Controller 请求分发"]
+        direction TB
+        C1["前台控制器<br/>HomeController / AuthController / PetController<br/>ProfileController / AppController(用户)<br/>AiMatchController / AiChatController"]:::controllerStyle
+
+        C2["后台控制器<br/>AdminController / UserController / BreedController<br/>PetManageController / AppController(管理)<br/>AiRecordController"]:::controllerStyle
+    end
+
+    %% ========== 第4层：业务层 ==========
+    subgraph L4 ["4. 业务层 - Service 业务逻辑处理"]
+        direction TB
+        S1["基础业务服务<br/>UserService / PetService / BreedService<br/>ApplicationService / FileStorageService"]:::serviceStyle
+
+        S2["AI 智能服务<br/>AiService / AiMatchService<br/>AiReviewService / AiChatService"]:::serviceStyle
+    end
+
+    %% ========== 第5层：数据访问层 ==========
+    subgraph L5 ["5. 数据访问层 - MyBatis-Plus Mapper"]
+        direction TB
+        M1["用户与角色数据<br/>UserMapper / RoleMapper"]:::dataStyle
+        M2["宠物与申请数据<br/>PetMapper / BreedMapper / PetImageMapper<br/>ApplicationMapper"]:::dataStyle
+        M3["AI 记录数据<br/>AiMatchRecordMapper / AiReviewRecordMapper"]:::dataStyle
+    end
+
+    %% ========== 第6层：基础设施 ==========
+    subgraph L6 ["6. 基础设施 - 系统运行支撑"]
+        direction TB
+        DB[("MySQL 8.0<br/>pet_mgt 数据库")]:::dbStyle
+        AI_API["DeepSeek API<br/>deepseek-chat 模型"]:::aiStyle
+        FS["文件系统<br/>uploads/pets/"]:::fileStyle
+    end
+
+    %% ========== 主流程连接 ==========
+    USER --> P1
+    USER --> P2
+    USER --> P3
+
+    P1 --> SEC1
+    P2 --> SEC2
+    P3 --> SEC3
+
+    SEC1 --> C1
+    SEC2 --> C1
+    SEC3 --> C2
+
+    C1 --> S1
+    C1 --> S2
+    C2 --> S1
+    C2 --> S2
+
+    S1 --> M1
+    S1 --> M2
+    S2 --> M3
+
+    M1 --> DB
+    M2 --> DB
+    M3 --> DB
+
+    S2 -.-> AI_API
+    S1 -.-> FS
+
+    %% ========== 分组样式 ==========
+    style L1 fill:#FAFAFA,stroke:#B0BEC5,stroke-width:1px,color:#37474F
+    style L2 fill:#FAFAFA,stroke:#B0BEC5,stroke-width:1px,color:#37474F
+    style L3 fill:#FAFAFA,stroke:#B0BEC5,stroke-width:1px,color:#37474F
+    style L4 fill:#FAFAFA,stroke:#B0BEC5,stroke-width:1px,color:#37474F
+    style L5 fill:#FAFAFA,stroke:#B0BEC5,stroke-width:1px,color:#37474F
+    style L6 fill:#FAFAFA,stroke:#B0BEC5,stroke-width:1px,color:#37474F

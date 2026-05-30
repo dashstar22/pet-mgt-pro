@@ -6,3 +6,4 @@ target/
 *.iml
 .vscode/
 .worktrees/
+.npm-cache-tmp/
