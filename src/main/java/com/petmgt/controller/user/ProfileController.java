@@ -24,9 +24,10 @@ public class ProfileController {
     @GetMapping("/profile")
     public ApiResponse<User> profile() {
         User user = SecurityUtil.getCurrentUser();
-        if (user != null) {
-            user.setPassword(null);
+        if (user == null) {
+            return ApiResponse.error(401, "未登录");
         }
+        user.setPassword(null);
         return ApiResponse.success(user);
     }
 
