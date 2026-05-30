@@ -1,45 +1,68 @@
 package com.petmgt.controller.user;
 
+import com.petmgt.dto.ApiResponse;
 import com.petmgt.entity.User;
-import com.petmgt.exception.BusinessException;
 import com.petmgt.mapper.UserMapper;
 import com.petmgt.util.SecurityUtil;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.*;
 
-@Controller
-@RequestMapping("/user")
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/user")
 public class ProfileController {
 
     private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
 
-    public ProfileController(UserMapper userMapper) {
+    public ProfileController(UserMapper userMapper, PasswordEncoder passwordEncoder) {
         this.userMapper = userMapper;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @GetMapping("/profile")
-    public String profile(Model model) {
+    public ApiResponse<User> profile() {
         User user = SecurityUtil.getCurrentUser();
-        model.addAttribute("title", "个人中心");
-        model.addAttribute("user", user);
-        return "user/profile";
+        if (user == null) {
+            return ApiResponse.error(401, "未登录");
+        }
+        user.setPassword(null);
+        return ApiResponse.success(user);
     }
 
-    @PostMapping("/profile")
-    public String updateProfile(String email, String avatarUrl, RedirectAttributes redirectAttributes) {
-        if (email != null && !email.isBlank()
-                && !email.matches("^[\\w.-]+@[\\w.-]+\\.[a-zA-Z]{2,}$")) {
-            throw new BusinessException("邮箱格式不正确");
-        }
+    @PutMapping("/profile")
+    public ApiResponse<Void> updateProfile(@RequestBody Map<String, String> body) {
         User user = SecurityUtil.getCurrentUser();
-        user.setEmail(email);
-        user.setAvatarUrl(avatarUrl);
+        if (user == null) {
+            return ApiResponse.error(401, "未登录");
+        }
+        if (body.containsKey("email")) {
+            user.setEmail(body.get("email"));
+        }
+        if (body.containsKey("avatarUrl")) {
+            user.setAvatarUrl(body.get("avatarUrl"));
+        }
         userMapper.updateById(user);
-        redirectAttributes.addFlashAttribute("success", "个人信息已更新");
-        return "redirect:/user/profile";
+        return ApiResponse.success("更新成功", null);
+    }
+
+    @PutMapping("/password")
+    public ApiResponse<Void> changePassword(@RequestBody Map<String, String> body) {
+        User user = SecurityUtil.getCurrentUser();
+        if (user == null) {
+            return ApiResponse.error(401, "未登录");
+        }
+        String oldPassword = body.get("oldPassword");
+        String newPassword = body.get("newPassword");
+        if (oldPassword == null || newPassword == null) {
+            return ApiResponse.error(400, "旧密码和新密码不能为空");
+        }
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            return ApiResponse.error(400, "旧密码错误");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userMapper.updateById(user);
+        return ApiResponse.success("密码修改成功", null);
     }
 }

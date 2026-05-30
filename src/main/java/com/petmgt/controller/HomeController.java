@@ -1,14 +1,14 @@
 package com.petmgt.controller;
 
+import com.petmgt.dto.ApiResponse;
 import com.petmgt.entity.Pet;
 import com.petmgt.service.PetService;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@Controller
+@RestController
 public class HomeController {
 
     private final PetService petService;
@@ -17,11 +17,9 @@ public class HomeController {
         this.petService = petService;
     }
 
-    @GetMapping("/")
-    public String home(Model model) {
+    @GetMapping("/api/home")
+    public ApiResponse<List<Pet>> home() {
         List<Pet> latestPets = petService.findLatestPets(8);
-        model.addAttribute("title", "首页");
-        model.addAttribute("latestPets", latestPets);
-        return "home";
+        return ApiResponse.success(latestPets);
     }
 }

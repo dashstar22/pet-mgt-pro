@@ -2,27 +2,18 @@ package com.petmgt.controller.user;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.petmgt.dto.ApiResponse;
 import com.petmgt.dto.ApplicationForm;
+import com.petmgt.dto.PageResponse;
 import com.petmgt.entity.Application;
 import com.petmgt.entity.Pet;
-import com.petmgt.exception.BusinessException;
-import com.petmgt.mapper.ApplicationMapper;
-import com.petmgt.mapper.BreedMapper;
-import com.petmgt.mapper.PetImageMapper;
-import com.petmgt.mapper.PetMapper;
+import com.petmgt.mapper.*;
 import com.petmgt.service.ApplicationService;
 import com.petmgt.util.SecurityUtil;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.bind.annotation.*;
 
-@Controller("userApplicationController")
-@RequestMapping("/user")
+@RestController("userApplicationController")
+@RequestMapping("/api/applications")
 public class ApplicationController {
 
     private final ApplicationService applicationService;
@@ -32,10 +23,9 @@ public class ApplicationController {
     private final PetImageMapper petImageMapper;
 
     public ApplicationController(ApplicationService applicationService,
-                                 ApplicationMapper applicationMapper,
-                                 PetMapper petMapper,
-                                 BreedMapper breedMapper,
-                                 PetImageMapper petImageMapper) {
+                                  ApplicationMapper applicationMapper,
+                                  PetMapper petMapper, BreedMapper breedMapper,
+                                  PetImageMapper petImageMapper) {
         this.applicationService = applicationService;
         this.applicationMapper = applicationMapper;
         this.petMapper = petMapper;
@@ -43,95 +33,56 @@ public class ApplicationController {
         this.petImageMapper = petImageMapper;
     }
 
-    @GetMapping("/apply/{petId}")
-    public String applicationForm(@PathVariable Long petId, Model model) {
-        Pet pet = petMapper.selectById(petId);
-        if (pet == null) {
-            return "redirect:/pets";
-        }
-        model.addAttribute("title", "提交领养申请");
-        model.addAttribute("pet", pet);
-        return "user/application-form";
-    }
-
-    @PostMapping("/apply")
-    public String submitApplication(ApplicationForm form, RedirectAttributes redirectAttributes) {
-        try {
-            Long userId = SecurityUtil.getCurrentUser().getId();
-            applicationService.submit(form, userId);
-            redirectAttributes.addFlashAttribute("success", "申请已提交，请等待审核");
-            return "redirect:/user/applications";
-        } catch (IllegalArgumentException e) {
-            throw new BusinessException(e.getMessage());
-        }
-    }
-
-    @GetMapping("/applications")
-    public String myApplications(@RequestParam(defaultValue = "1") int page,
-                                 @RequestParam(defaultValue = "10") int size,
-                                 Model model) {
+    @PostMapping
+    public ApiResponse<Void> submit(@RequestBody ApplicationForm form) {
         Long userId = SecurityUtil.getCurrentUser().getId();
-        Page<Application> appPage = new Page<>(page, size);
-        LambdaQueryWrapper<Application> wrapper = new LambdaQueryWrapper<Application>()
-            .eq(Application::getUserId, userId)
-            .orderByDesc(Application::getCreatedAt);
-        Page<Application> result = applicationMapper.selectPage(appPage, wrapper);
+        applicationService.submit(form, userId);
+        return ApiResponse.success("申请已提交", null);
+    }
 
+    @GetMapping
+    public ApiResponse<PageResponse<Application>> myApplications(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Long userId = SecurityUtil.getCurrentUser().getId();
+        Page<Application> pageParam = new Page<>(page, size);
+        LambdaQueryWrapper<Application> wrapper = new LambdaQueryWrapper<Application>()
+                .eq(Application::getUserId, userId)
+                .orderByDesc(Application::getCreatedAt);
+        Page<Application> result = applicationMapper.selectPage(pageParam, wrapper);
         for (Application app : result.getRecords()) {
             Pet pet = petMapper.selectById(app.getPetId());
             if (pet != null) {
                 app.setPetName(pet.getName());
-                app.setCoverImageUrl(
-                    petImageMapper.selectList(new LambdaQueryWrapper<com.petmgt.entity.PetImage>()
-                        .eq(com.petmgt.entity.PetImage::getPetId, pet.getId())
-                        .eq(com.petmgt.entity.PetImage::getIsCover, 1))
-                        .stream().findFirst()
-                        .map(com.petmgt.entity.PetImage::getImageUrl).orElse(null));
-                var breed = breedMapper.selectById(pet.getBreedId());
-                if (breed != null) {
-                    app.setBreedName(breed.getBreedName());
-                }
+                app.setBreedName(breedMapper.selectById(pet.getBreedId()) != null
+                        ? breedMapper.selectById(pet.getBreedId()).getBreedName() : null);
             }
         }
-
-        model.addAttribute("title", "我的申请");
-        model.addAttribute("page", result);
-        return "user/applications";
+        PageResponse<Application> resp = new PageResponse<>(
+                result.getRecords(), result.getTotal(), (int) result.getCurrent(), (int) result.getSize());
+        return ApiResponse.success(resp);
     }
 
-    @PostMapping("/applications/{id}/cancel")
-    public String cancelApplication(@PathVariable Long id, RedirectAttributes redirectAttributes) {
-        try {
-            Long userId = SecurityUtil.getCurrentUser().getId();
-            applicationService.cancel(id, userId);
-            redirectAttributes.addFlashAttribute("success", "申请已取消");
-        } catch (IllegalArgumentException e) {
-            throw new BusinessException(e.getMessage());
+    @GetMapping("/{id}")
+    public ApiResponse<Application> detail(@PathVariable Long id) {
+        Application app = applicationMapper.selectById(id);
+        if (app == null) {
+            return ApiResponse.error(404, "申请不存在");
         }
-        return "redirect:/user/applications";
+        return ApiResponse.success(app);
     }
 
-    @PostMapping("/applications/{id}/delete")
-    public String deleteApplication(@PathVariable Long id, RedirectAttributes redirectAttributes) {
-        try {
-            Long userId = SecurityUtil.getCurrentUser().getId();
-            applicationService.deleteById(id, userId);
-            redirectAttributes.addFlashAttribute("success", "申请记录已删除");
-        } catch (IllegalArgumentException e) {
-            throw new BusinessException(e.getMessage());
-        }
-        return "redirect:/user/applications";
+    @PutMapping("/{id}/cancel")
+    public ApiResponse<Void> cancel(@PathVariable Long id) {
+        Long userId = SecurityUtil.getCurrentUser().getId();
+        applicationService.cancel(id, userId);
+        return ApiResponse.success("申请已取消", null);
     }
 
-    @PostMapping("/applications/clear")
-    public String clearApplications(RedirectAttributes redirectAttributes) {
-        try {
-            Long userId = SecurityUtil.getCurrentUser().getId();
-            applicationService.deleteAllByUserId(userId);
-            redirectAttributes.addFlashAttribute("success", "所有申请记录已清空");
-        } catch (IllegalArgumentException e) {
-            throw new BusinessException(e.getMessage());
-        }
-        return "redirect:/user/applications";
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        Long userId = SecurityUtil.getCurrentUser().getId();
+        applicationService.deleteById(id, userId);
+        return ApiResponse.success("删除成功", null);
     }
 }

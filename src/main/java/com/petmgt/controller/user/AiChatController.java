@@ -1,18 +1,13 @@
 package com.petmgt.controller.user;
 
+import com.petmgt.dto.ApiResponse;
 import com.petmgt.service.ai.AiChatService;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-@Controller
-@RequestMapping("/user/ai-chat")
+@RestController
+@RequestMapping("/api/ai-chat")
 public class AiChatController {
 
     private final AiChatService aiChatService;
@@ -21,16 +16,13 @@ public class AiChatController {
         this.aiChatService = aiChatService;
     }
 
-    @GetMapping
-    public String chatPage(Model model) {
-        model.addAttribute("title", "养宠问答");
-        return "user/ai-chat";
-    }
-
     @PostMapping
-    @ResponseBody
-    public Map<String, String> ask(@RequestParam String question) {
+    public ApiResponse<Map<String, String>> chat(@RequestBody Map<String, String> body) {
+        String question = body.get("question");
+        if (question == null || question.trim().isEmpty()) {
+            return ApiResponse.error(400, "问题不能为空");
+        }
         String answer = aiChatService.chat(question);
-        return Map.of("answer", answer);
+        return ApiResponse.success(Map.of("answer", answer));
     }
 }
