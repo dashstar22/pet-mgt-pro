@@ -15,9 +15,10 @@ export function setUserStore(store) {
 // Request interceptor — attach Bearer token
 service.interceptors.request.use(
   (config) => {
-    const token = userStore?.token
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+    // userStore.token is a Vue ref; access .value for the actual token string
+    const tokenVal = userStore?.token?.value ?? userStore?.token
+    if (tokenVal) {
+      config.headers.Authorization = `Bearer ${tokenVal}`
     }
     return config
   },
@@ -31,15 +32,24 @@ service.interceptors.response.use(
     if (code === 200) {
       return data
     }
+
+    // Determine if this request was marked silent (suppress toasts, used for
+    // session-restore profile fetch in the router guard)
+    const isSilent = response.config?.headers?.['X-Silent'] === '1'
+
     // 401 — Token expired or not logged in
     if (code === 401) {
       if (userStore) userStore.logout()
-      ElMessage.error(msg || '登录已过期，请重新登录')
+      if (!isSilent) {
+        ElMessage.error(msg || '登录已过期，请重新登录')
+      }
       return Promise.reject(new Error(msg))
     }
     // 403 — Access denied
     if (code === 403) {
-      ElMessage.error(msg || '无权限访问')
+      if (!isSilent) {
+        ElMessage.error(msg || '无权限访问')
+      }
       return Promise.reject(new Error(msg))
     }
     // Other business errors

@@ -2,11 +2,13 @@ package com.petmgt.controller.user;
 
 import com.petmgt.dto.ApiResponse;
 import com.petmgt.entity.User;
+import com.petmgt.mapper.RoleMapper;
 import com.petmgt.mapper.UserMapper;
 import com.petmgt.util.SecurityUtil;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -15,10 +17,13 @@ public class ProfileController {
 
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final RoleMapper roleMapper;
 
-    public ProfileController(UserMapper userMapper, PasswordEncoder passwordEncoder) {
+    public ProfileController(UserMapper userMapper, PasswordEncoder passwordEncoder,
+                             RoleMapper roleMapper) {
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
+        this.roleMapper = roleMapper;
     }
 
     @GetMapping("/profile")
@@ -27,6 +32,9 @@ public class ProfileController {
         if (user == null) {
             return ApiResponse.error(401, "未登录");
         }
+        // Populate roles so the frontend can restore isAdmin on page refresh
+        List<String> roles = roleMapper.findRoleNamesByUserId(user.getId());
+        user.setRoles(roles);
         user.setPassword(null);
         return ApiResponse.success(user);
     }

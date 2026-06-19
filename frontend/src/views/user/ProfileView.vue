@@ -54,7 +54,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed } from 'vue'
+import { reactive, ref, computed, onMounted, watch } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import FileUpload from '@/components/FileUpload.vue'
@@ -63,9 +63,27 @@ import { UserFilled } from '@element-plus/icons-vue'
 
 const userStore = useUserStore()
 
+// Load full profile (id, email, avatarUrl) when visiting this page
+onMounted(async () => {
+  await userStore.fetchProfile()
+  avatarUrl.value = userStore.userInfo?.avatarUrl || ''
+  infoForm.email = userStore.userInfo?.email || ''
+})
+
 // Avatar
 const avatarUrl = ref(userStore.userInfo?.avatarUrl || '')
 const avatarPreviewUrl = computed(() => getImageUrl(avatarUrl.value))
+
+// Auto-save avatar to backend immediately on change (upload / remove)
+watch(avatarUrl, async (newUrl) => {
+  if (newUrl === (userStore.userInfo?.avatarUrl || '')) return
+  try {
+    await userStore.updateProfile({ avatarUrl: newUrl })
+    ElMessage.success(newUrl ? '头像已更新' : '头像已移除')
+  } catch {
+    // handled by interceptor
+  }
+})
 
 // Info form
 const infoLoading = ref(false)
@@ -78,7 +96,6 @@ async function saveInfo() {
   try {
     await userStore.updateProfile({
       email: infoForm.email,
-      avatarUrl: avatarUrl.value,
     })
     ElMessage.success('保存成功')
   } catch {
@@ -136,33 +153,54 @@ async function savePassword() {
 
 <style scoped>
 .profile-content {
+  max-width: 620px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 24px;
 }
 
 .profile-section {
   background: #fff;
-  padding: 24px;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  padding: 28px;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(124,92,252,0.04), 0 4px 16px rgba(124,92,252,0.06);
 }
 
 .profile-section h3 {
-  margin-bottom: 16px;
-  font-size: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #ebeef5;
+  margin-bottom: 20px;
+  font-size: 17px;
+  font-weight: 700;
+  padding-bottom: 14px;
+  border-bottom: 2px solid #ede9f6;
+  color: #1e1b4b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-section h3::before {
+  content: '';
+  width: 4px;
+  height: 20px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #7c5cfc, #f472b6);
 }
 
 .avatar-area {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 28px;
 }
 
 .profile-avatar {
   flex-shrink: 0;
+  border: 3px solid #ddd6fe;
+  transition: border-color 0.3s;
+}
+
+.profile-avatar:hover {
+  border-color: #7c5cfc;
 }
 
 .avatar-upload {
@@ -171,5 +209,19 @@ async function savePassword() {
 
 .profile-form {
   max-width: 480px;
+}
+
+.profile-form :deep(.el-form-item__label) {
+  font-weight: 500;
+  color: #4c1d95;
+}
+
+.profile-form :deep(.el-input__wrapper) {
+  border-radius: 10px;
+}
+
+.profile-form :deep(.el-button--primary) {
+  border-radius: 10px;
+  font-weight: 600;
 }
 </style>

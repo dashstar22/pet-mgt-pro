@@ -1,7 +1,11 @@
 import request from './request'
 
-export function getProfile() {
-  return request.get('/user/profile')
+export function getProfile({ silent = false } = {}) {
+  const config = {}
+  if (silent) {
+    config.headers = { 'X-Silent': '1' }
+  }
+  return request.get('/user/profile', config)
 }
 
 export function updateProfile(data) {

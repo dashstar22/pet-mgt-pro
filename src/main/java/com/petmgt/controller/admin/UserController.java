@@ -7,6 +7,7 @@ import com.petmgt.dto.PageResponse;
 import com.petmgt.entity.User;
 import com.petmgt.mapper.RoleMapper;
 import com.petmgt.mapper.UserMapper;
+import com.petmgt.service.UserService;
 import com.petmgt.util.SecurityUtil;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -21,12 +22,14 @@ public class UserController {
     private final UserMapper userMapper;
     private final RoleMapper roleMapper;
     private final PasswordEncoder passwordEncoder;
+    private final UserService userService;
 
     public UserController(UserMapper userMapper, RoleMapper roleMapper,
-                          PasswordEncoder passwordEncoder) {
+                          PasswordEncoder passwordEncoder, UserService userService) {
         this.userMapper = userMapper;
         this.roleMapper = roleMapper;
         this.passwordEncoder = passwordEncoder;
+        this.userService = userService;
     }
 
     @GetMapping
@@ -65,6 +68,7 @@ public class UserController {
             return ApiResponse.error(400, "用户名已存在");
         }
         User user = new User();
+        user.setId(userService.nextUserId());
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(password));
         user.setEmail(email);
@@ -108,6 +112,7 @@ public class UserController {
         if (currentUser != null && currentUser.getId().equals(id)) {
             return ApiResponse.error(400, "不能删除自己的账号");
         }
+        roleMapper.deleteUserRoles(id);
         userMapper.deleteById(id);
         return ApiResponse.success("删除成功", null);
     }

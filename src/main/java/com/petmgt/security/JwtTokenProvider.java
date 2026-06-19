@@ -80,9 +80,16 @@ public class JwtTokenProvider {
 
     /**
      * Get userId from token.
+     * Extracts as Object first, then converts via Number.longValue() —
+     * this handles JJWT + Jackson deserializing small JSON numbers as Integer
+     * instead of Long, which would cause get("userId", Long.class) to return null.
      */
     public Long getUserId(String token) {
-        return parseClaims(token).get("userId", Long.class);
+        Object value = parseClaims(token).get("userId");
+        if (value instanceof Number n) {
+            return n.longValue();
+        }
+        return null;
     }
 
     /**

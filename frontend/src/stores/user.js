@@ -24,11 +24,12 @@ export const useUserStore = defineStore('user', () => {
     const data = await loginApi({ username, password })
     token.value = data.token
     localStorage.setItem('token', data.token)
+    // Basic info from login response; full profile (id/email/avatarUrl)
+    // is loaded on-demand by AppHeader / ProfileView
     userInfo.value = {
       username: data.username,
       roles: data.roles,
     }
-    await fetchProfile()
     return data
   }
 
@@ -44,7 +45,7 @@ export const useUserStore = defineStore('user', () => {
 
   async function fetchProfile() {
     try {
-      const user = await getProfile()
+      const user = await getProfile({ silent: true })
       if (user) {
         userInfo.value = {
           ...userInfo.value,
@@ -52,10 +53,12 @@ export const useUserStore = defineStore('user', () => {
           username: user.username,
           email: user.email,
           avatarUrl: user.avatarUrl,
+          roles: user.roles,
         }
       }
     } catch {
-      logout()
+      // Silently fail — the caller decides how to handle it.
+      // (router guard checks isLoggedIn; login keeps basic info from login response)
     }
   }
 

@@ -24,6 +24,33 @@ public class AiReviewService {
         this.reviewRecordMapper = reviewRecordMapper;
     }
 
+    /**
+     * 查詢已保存的 AI 審核記錄（避免重複調用 AI）
+     */
+    public AiReviewResult getExistingReview(Long applicationId) {
+        var wrapper = new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<AiReviewRecord>();
+        wrapper.eq(AiReviewRecord::getApplicationId, applicationId);
+        AiReviewRecord record = reviewRecordMapper.selectOne(wrapper);
+        if (record == null) {
+            return null;
+        }
+        AiReviewResult result = new AiReviewResult();
+        result.setScore(record.getScore());
+        result.setSuggestion(record.getSuggestion());
+        // 嘗試從 resultText 解析完整結果
+        try {
+            AiReviewResult parsed = objectMapper.readValue(record.getResultText(), AiReviewResult.class);
+            if (parsed != null) {
+                result = parsed;
+                result.setScore(record.getScore());
+                result.setSuggestion(record.getSuggestion());
+            }
+        } catch (Exception ignored) {
+            // 如果 resultText 無法解析，使用已設置的基本字段
+        }
+        return result;
+    }
+
     public AiReviewResult review(Application application, Pet pet) {
         String systemPrompt = """
             你是一个宠物领养审核辅助助手。分析申请人信息与宠物的匹配程度。

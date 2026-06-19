@@ -18,12 +18,14 @@
 
         <template v-if="userStore.isLoggedIn && !userStore.isAdmin">
           <el-menu-item index="/user/ai-match">AI匹配</el-menu-item>
+          <el-menu-item index="/user/ai-chat">AI问答</el-menu-item>
           <el-menu-item index="/user/applications">我的申请</el-menu-item>
           <el-menu-item index="/user/profile">个人中心</el-menu-item>
         </template>
 
         <template v-if="userStore.isAdmin">
           <el-menu-item index="/user/ai-match">AI匹配</el-menu-item>
+          <el-menu-item index="/user/ai-chat">AI问答</el-menu-item>
           <el-menu-item index="/user/applications">我的申请</el-menu-item>
           <el-menu-item index="/user/profile">个人中心</el-menu-item>
           <el-sub-menu index="admin-sub">
@@ -56,7 +58,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { getImageUrl } from '@/utils/imageUrl'
@@ -75,6 +77,13 @@ const activeRoute = computed(() => {
   return route.path
 })
 
+// Enrich userInfo with full profile (id, email, avatarUrl) on mount
+onMounted(() => {
+  if (userStore.isLoggedIn) {
+    userStore.fetchProfile()
+  }
+})
+
 function handleSelect(index) {
   if (index === 'logout') {
     userStore.logout()
@@ -88,7 +97,11 @@ function handleSelect(index) {
 <style scoped>
 .app-header {
   padding: 0;
-  border-bottom: 1px solid #e4e7ed;
+  border-bottom: none !important;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 1px 3px rgba(124, 92, 252, 0.04), 0 2px 8px rgba(124, 92, 252, 0.05);
 }
 
 .header-container {
@@ -108,11 +121,20 @@ function handleSelect(index) {
 
 .brand-item {
   font-size: 16px;
+  height: 60px;
+}
+
+.brand-item:hover {
+  background: transparent !important;
 }
 
 .brand-text {
-  font-weight: 700;
-  font-size: 17px;
+  font-weight: 800;
+  font-size: 18px;
+  background: linear-gradient(135deg, #7c5cfc, #f472b6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .logout-item {
@@ -121,5 +143,6 @@ function handleSelect(index) {
 
 .header-avatar {
   flex-shrink: 0;
+  border: 2px solid #ddd6fe;
 }
 </style>

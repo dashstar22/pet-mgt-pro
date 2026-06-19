@@ -13,7 +13,7 @@
         </el-form-item>
         <el-form-item label="性别" prop="gender">
           <el-radio-group v-model="form.gender">
-            <el-radio label="公">公</el-radio><el-radio label="母">母</el-radio>
+            <el-radio value="公">公</el-radio><el-radio value="母">母</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="年龄" prop="age">
@@ -47,7 +47,7 @@
         <el-form-item label="宠物图片">
           <div class="image-upload-area">
             <div v-for="(img, i) in form.images" :key="i" class="image-upload-item">
-              <img :src="img.preview || '/uploads/' + img.url" />
+              <img :src="img.preview || getImageUrl(img.url)" />
               <el-button type="danger" circle size="small" class="image-remove" @click="removeImage(i)">×</el-button>
             </div>
             <div v-if="form.images.length < 6" class="upload-placeholder" @click="triggerUpload">
@@ -71,6 +71,7 @@ import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
+import { getImageUrl } from '@/utils/imageUrl'
 import { getBreedDisplay } from '@/utils/labels'
 import { createPet, updatePet, getAdminPetList } from '@/api/admin'
 import { getBreeds } from '@/api/breed'
@@ -89,6 +90,8 @@ const form = reactive({
   name: '', breedId: null, gender: '公', age: 0, weight: null,
   healthStatus: '', vaccineStatus: '', sterilizationStatus: '',
   personality: '', adoptionRequirement: '', status: '',
+  images: [],
+  coverIndex: 0,
   existingImages: [],
   newImages: [],
   deleteImageIds: [],
@@ -178,10 +181,23 @@ async function handleSave() {
 </script>
 
 <style scoped>
-.image-upload-area { display: flex; flex-wrap: wrap; gap: 8px; }
-.image-upload-item { width: 100px; height: 100px; position: relative; border-radius: 6px; overflow: hidden; }
+.image-upload-area { display: flex; flex-wrap: wrap; gap: 10px; }
+.image-upload-item { width: 100px; height: 100px; position: relative; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(124,92,252,0.08); }
 .image-upload-item img { width: 100%; height: 100%; object-fit: cover; }
 .image-remove { position: absolute; top: -4px; right: -4px; width: 20px; height: 20px; }
-.upload-placeholder { width: 100px; height: 100px; border: 2px dashed #dcdfe6; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; color: #909399; cursor: pointer; }
-.upload-placeholder:hover { border-color: #409eff; color: #409eff; }
+.upload-placeholder {
+  width: 100px; height: 100px;
+  border: 2px dashed #ddd6fe;
+  border-radius: 10px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 4px; font-size: 12px;
+  color: #a78bfa; cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.upload-placeholder:hover {
+  border-color: #7c5cfc;
+  color: #7c5cfc;
+  background: #f5f0ff;
+}
 </style>

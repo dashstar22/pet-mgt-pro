@@ -147,7 +147,7 @@ router.beforeEach(async (to, from, next) => {
     try {
       await userStore.fetchProfile()
     } catch {
-      // fetchProfile handles logout internally
+      // 401 interceptor clears token; isLoggedIn stays false → guard redirects to /login
     }
   }
 

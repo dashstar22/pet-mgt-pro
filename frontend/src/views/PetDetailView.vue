@@ -8,7 +8,7 @@
       <div class="detail-images">
         <el-image
           v-if="mainImage"
-          :src="'/uploads/' + mainImage"
+          :src="getImageUrl(mainImage)"
           fit="cover"
           class="main-image"
         />
@@ -17,7 +17,7 @@
           <img
             v-for="img in images"
             :key="img.id"
-            :src="'/uploads/' + img.imageUrl"
+            :src="getImageUrl(img.imageUrl)"
             class="thumb"
             :class="{ active: mainImage === img.imageUrl }"
             @click="mainImage = img.imageUrl"
@@ -75,6 +75,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getPetDetail, getPetImages } from '@/api/pet'
 import { useUserStore } from '@/stores/user'
+import { getImageUrl } from '@/utils/imageUrl'
 import { getBreedDisplay, getPetStatusDisplay, getPetStatusTagType } from '@/utils/labels'
 
 const route = useRoute()

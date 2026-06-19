@@ -2,6 +2,7 @@ package com.petmgt.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.petmgt.entity.Role;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Select;
 
@@ -14,4 +15,7 @@ public interface RoleMapper extends BaseMapper<Role> {
 
     @Insert("INSERT INTO user_role (user_id, role_id) VALUES (#{userId}, #{roleId})")
     void insertUserRole(Long userId, Long roleId);
+
+    @Delete("DELETE FROM user_role WHERE user_id = #{userId}")
+    void deleteUserRoles(Long userId);
 }

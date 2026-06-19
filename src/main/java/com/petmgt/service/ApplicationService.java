@@ -45,7 +45,7 @@ public class ApplicationService {
         app.setAddress(form.getAddress());
         app.setExperience(form.getExperience());
         app.setAccompanyTime(form.getAccompanyTime());
-        app.setReason(form.getReason());
+        app.setReason(form.getReason() != null ? form.getReason() : "");
         app.setStatus("pending");
         applicationMapper.insert(app);
 
@@ -141,8 +141,16 @@ public class ApplicationService {
         String status = app.getStatus();
         applicationMapper.deleteById(applicationId);
 
+        // 待审核 → 检查是否还有其他待审核申请，没有则恢复宠物为可领养
+        // 已通过 → 归还宠物，恢复为可领养
         if ("pending".equals(status)) {
             revertPetIfNoPending(petId);
+        } else if ("approved".equals(status)) {
+            Pet pet = petMapper.selectById(petId);
+            if (pet != null) {
+                pet.setStatus("available");
+                petMapper.updateById(pet);
+            }
         }
     }
 

@@ -27,12 +27,14 @@ public class ApplicationController {
     private final PetImageMapper petImageMapper;
     private final UserMapper userMapper;
     private final AiReviewService aiReviewService;
+    private final AiReviewRecordMapper aiReviewRecordMapper;
 
     public ApplicationController(ApplicationMapper applicationMapper,
                                   ApplicationService applicationService,
                                   PetMapper petMapper, BreedMapper breedMapper,
                                   PetImageMapper petImageMapper, UserMapper userMapper,
-                                  AiReviewService aiReviewService) {
+                                  AiReviewService aiReviewService,
+                                  AiReviewRecordMapper aiReviewRecordMapper) {
         this.applicationMapper = applicationMapper;
         this.applicationService = applicationService;
         this.petMapper = petMapper;
@@ -40,6 +42,7 @@ public class ApplicationController {
         this.petImageMapper = petImageMapper;
         this.userMapper = userMapper;
         this.aiReviewService = aiReviewService;
+        this.aiReviewRecordMapper = aiReviewRecordMapper;
     }
 
     @GetMapping
@@ -85,10 +88,11 @@ public class ApplicationController {
             app.setBreedName(breedMapper.selectById(pet.getBreedId()) != null
                     ? breedMapper.selectById(pet.getBreedId()).getBreedName() : null);
         }
+        // 详情接口只返回已缓存的 AI 审核，不阻塞等待 AI 生成
         Object aiReview = null;
         if ("pending".equals(app.getStatus())) {
             try {
-                aiReview = aiReviewService.review(app, pet);
+                aiReview = aiReviewService.getExistingReview(id);
             } catch (Exception ignored) {}
         }
         Map<String, Object> data = new HashMap<>();
@@ -97,6 +101,29 @@ public class ApplicationController {
         data.put("user", user);
         data.put("aiReview", aiReview);
         return ApiResponse.success(data);
+    }
+
+    /**
+     * 获取或生成 AI 审核建议（独立接口，可能较慢）
+     */
+    @GetMapping("/{id}/ai-review")
+    public ApiResponse<Object> aiReview(@PathVariable Long id) {
+        Application app = applicationMapper.selectById(id);
+        if (app == null) {
+            return ApiResponse.error(404, "申请不存在");
+        }
+        if (!"pending".equals(app.getStatus())) {
+            return ApiResponse.error(400, "仅待审核申请可获取 AI 建议");
+        }
+        // 先查缓存
+        Object cached = aiReviewService.getExistingReview(id);
+        if (cached != null) {
+            return ApiResponse.success(cached);
+        }
+        // 无缓存则调用 AI 生成
+        Pet pet = petMapper.selectById(app.getPetId());
+        Object result = aiReviewService.review(app, pet);
+        return ApiResponse.success(result);
     }
 
     @PutMapping("/{id}/approve")

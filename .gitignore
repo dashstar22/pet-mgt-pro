@@ -7,3 +7,7 @@ target/
 .vscode/
 .worktrees/
 .npm-cache-tmp/
+node_modules/
+dist/
+.superpowers/
+.claude/

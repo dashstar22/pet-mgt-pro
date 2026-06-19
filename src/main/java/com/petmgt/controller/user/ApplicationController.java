@@ -7,6 +7,7 @@ import com.petmgt.dto.ApplicationForm;
 import com.petmgt.dto.PageResponse;
 import com.petmgt.entity.Application;
 import com.petmgt.entity.Pet;
+import com.petmgt.entity.User;
 import com.petmgt.mapper.*;
 import com.petmgt.service.ApplicationService;
 import com.petmgt.util.SecurityUtil;
@@ -35,8 +36,11 @@ public class ApplicationController {
 
     @PostMapping
     public ApiResponse<Void> submit(@RequestBody ApplicationForm form) {
-        Long userId = SecurityUtil.getCurrentUser().getId();
-        applicationService.submit(form, userId);
+        User user = SecurityUtil.getCurrentUser();
+        if (user == null) {
+            return ApiResponse.error(401, "未登录");
+        }
+        applicationService.submit(form, user.getId());
         return ApiResponse.success("申请已提交", null);
     }
 
@@ -44,7 +48,11 @@ public class ApplicationController {
     public ApiResponse<PageResponse<Application>> myApplications(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
-        Long userId = SecurityUtil.getCurrentUser().getId();
+        User user = SecurityUtil.getCurrentUser();
+        if (user == null) {
+            return ApiResponse.error(401, "未登录");
+        }
+        Long userId = user.getId();
         Page<Application> pageParam = new Page<>(page, size);
         LambdaQueryWrapper<Application> wrapper = new LambdaQueryWrapper<Application>()
                 .eq(Application::getUserId, userId)
@@ -74,15 +82,21 @@ public class ApplicationController {
 
     @PutMapping("/{id}/cancel")
     public ApiResponse<Void> cancel(@PathVariable Long id) {
-        Long userId = SecurityUtil.getCurrentUser().getId();
-        applicationService.cancel(id, userId);
+        User user = SecurityUtil.getCurrentUser();
+        if (user == null) {
+            return ApiResponse.error(401, "未登录");
+        }
+        applicationService.cancel(id, user.getId());
         return ApiResponse.success("申请已取消", null);
     }
 
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
-        Long userId = SecurityUtil.getCurrentUser().getId();
-        applicationService.deleteById(id, userId);
+        User user = SecurityUtil.getCurrentUser();
+        if (user == null) {
+            return ApiResponse.error(401, "未登录");
+        }
+        applicationService.deleteById(id, user.getId());
         return ApiResponse.success("删除成功", null);
     }
 }

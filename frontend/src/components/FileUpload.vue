@@ -30,6 +30,7 @@
 import { computed } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { getImageUrl } from '@/utils/imageUrl'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -45,8 +46,7 @@ const uploadHeaders = computed(() => {
 
 const previewUrl = computed(() => {
   if (!props.modelValue) return ''
-  if (props.modelValue.startsWith('http')) return props.modelValue
-  return '/uploads/' + props.modelValue
+  return getImageUrl(props.modelValue)
 })
 
 function beforeUpload(file) {
@@ -64,7 +64,7 @@ function beforeUpload(file) {
 }
 
 function handleSuccess(response) {
-  const url = response.url || response
+  const url = response?.data?.url || response?.url || response
   emit('update:modelValue', url)
   ElMessage.success('上传成功')
 }

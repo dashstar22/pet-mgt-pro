@@ -77,6 +77,10 @@ export function getAppDetail(id) {
   return request.get(`/admin/applications/${id}`)
 }
 
+export function getAiReview(id) {
+  return request.get(`/admin/applications/${id}/ai-review`)
+}
+
 export function approveApp(id, comment) {
   return request.put(`/admin/applications/${id}/approve`, { comment: comment || '' })
 }

@@ -4,43 +4,52 @@
     <el-card class="match-card">
       <p class="match-intro">告诉我们你的生活方式和偏好，AI 将为你推荐最合适的宠物。</p>
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
+        <el-form-item label="偏好宠物类型" prop="petType">
+          <el-select v-model="form.petType" placeholder="请选择">
+            <el-option label="狗" value="狗" />
+            <el-option label="猫" value="猫" />
+            <el-option label="不限" value="" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="居住环境" prop="livingSpace">
           <el-select v-model="form.livingSpace" placeholder="请选择">
-            <el-option label="公寓" value="apartment" />
-            <el-option label="楼房（有阳台/院子）" value="house" />
-            <el-option label="郊区/农村" value="rural" />
+            <el-option label="公寓" value="公寓" />
+            <el-option label="普通住宅" value="普通住宅" />
+            <el-option label="带院子" value="带院子" />
           </el-select>
         </el-form-item>
-        <el-form-item label="每日可陪伴时间" prop="timeAvailable">
-          <el-select v-model="form.timeAvailable" placeholder="请选择">
-            <el-option label="较少（1-2小时）" value="low" />
-            <el-option label="中等（3-5小时）" value="medium" />
-            <el-option label="充足（5小时以上）" value="high" />
+        <el-form-item label="每日可陪伴时间" prop="accompanyTime">
+          <el-select v-model="form.accompanyTime" placeholder="请选择">
+            <el-option label="少于1小时" value="少于1小时" />
+            <el-option label="1-3小时" value="1-3小时" />
+            <el-option label="3-6小时" value="3-6小时" />
+            <el-option label="6小时以上" value="6小时以上" />
           </el-select>
         </el-form-item>
-        <el-form-item label="是否有儿童" prop="hasChildren">
-          <el-radio-group v-model="form.hasChildren">
-            <el-radio label="yes">有</el-radio>
-            <el-radio label="no">没有</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="偏好宠物类型" prop="preferredType">
-          <el-select v-model="form.preferredType" placeholder="请选择">
-            <el-option label="狗" value="dog" />
-            <el-option label="猫" value="cat" />
-            <el-option label="不限" value="any" />
+        <el-form-item label="期望性格" prop="personality">
+          <el-select v-model="form.personality" placeholder="请选择">
+            <el-option label="温顺亲人" value="温顺亲人" />
+            <el-option label="活泼好动" value="活泼好动" />
+            <el-option label="独立安静" value="独立安静" />
+            <el-option label="聪明机警" value="聪明机警" />
+            <el-option label="不限" value="" />
           </el-select>
         </el-form-item>
-        <el-form-item label="偏好体型" prop="sizePreference">
-          <el-select v-model="form.sizePreference" placeholder="请选择">
-            <el-option label="小型" value="small" />
-            <el-option label="中型" value="medium" />
-            <el-option label="大型" value="large" />
-            <el-option label="不限" value="any" />
+        <el-form-item label="可接受健康状态" prop="healthAcceptance">
+          <el-select v-model="form.healthAcceptance" placeholder="请选择">
+            <el-option label="仅健康" value="仅健康" />
+            <el-option label="可接受轻微健康问题" value="可接受轻微健康问题" />
+            <el-option label="可接受任何状态" value="可接受任何状态" />
+            <el-option label="不限" value="" />
           </el-select>
         </el-form-item>
-        <el-form-item label="其他要求" prop="notes">
-          <el-input v-model="form.notes" type="textarea" :rows="3" placeholder="任何额外的要求或偏好" />
+        <el-form-item label="养宠经验" prop="experience">
+          <el-select v-model="form.experience" placeholder="请选择">
+            <el-option label="新手" value="新手" />
+            <el-option label="有一定经验" value="有一定经验" />
+            <el-option label="经验丰富" value="经验丰富" />
+            <el-option label="不限" value="" />
+          </el-select>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" size="large" :loading="loading" @click="handleMatch" style="width:100%">
@@ -63,18 +72,18 @@ const formRef = ref(null)
 const loading = ref(false)
 
 const form = reactive({
+  petType: '',
   livingSpace: '',
-  timeAvailable: '',
-  hasChildren: 'no',
-  preferredType: '',
-  sizePreference: '',
-  notes: '',
+  accompanyTime: '',
+  personality: '',
+  healthAcceptance: '',
+  experience: '',
 })
 
 const rules = {
+  petType: [{ required: true, message: '请选择偏好宠物类型', trigger: 'change' }],
   livingSpace: [{ required: true, message: '请选择居住环境', trigger: 'change' }],
-  timeAvailable: [{ required: true, message: '请选择陪伴时间', trigger: 'change' }],
-  preferredType: [{ required: true, message: '请选择偏好类型', trigger: 'change' }],
+  accompanyTime: [{ required: true, message: '请选择陪伴时间', trigger: 'change' }],
 }
 
 async function handleMatch() {
@@ -85,8 +94,8 @@ async function handleMatch() {
     const result = await aiMatch(form)
     sessionStorage.setItem('aiMatchResult', JSON.stringify(result))
     router.push('/user/ai-match/result')
-  } catch {
-    // handled
+  } catch (e) {
+    ElMessage.error(e?.message || '匹配失败，请稍后重试')
   } finally {
     loading.value = false
   }
@@ -94,6 +103,42 @@ async function handleMatch() {
 </script>
 
 <style scoped>
-.match-card { max-width: 600px; margin: 0 auto; }
-.match-intro { color: #909399; margin-bottom: 24px; line-height: 1.6; }
+.match-card {
+  max-width: 620px;
+  margin: 0 auto;
+  border-radius: 16px;
+  overflow: hidden;
+  border: none;
+  box-shadow: 0 1px 3px rgba(124,92,252,0.04), 0 6px 24px rgba(124,92,252,0.08);
+}
+
+.match-intro {
+  color: #6d5d8b;
+  margin-bottom: 28px;
+  line-height: 1.7;
+  font-size: 15px;
+  background: linear-gradient(135deg, #f5f0ff, #fdf2f8);
+  padding: 16px 20px;
+  border-radius: 12px;
+  border-left: 4px solid #7c5cfc;
+}
+
+.match-card :deep(.el-form-item__label) {
+  font-weight: 600;
+  color: #4c1d95;
+}
+
+.match-card :deep(.el-select) {
+  width: 100%;
+}
+
+.match-card :deep(.el-select .el-input__wrapper) {
+  border-radius: 10px;
+}
+
+.match-card :deep(.el-button--primary) {
+  border-radius: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
 </style>

@@ -16,11 +16,22 @@ public class UserService {
     private final UserMapper userMapper;
     private final RoleMapper roleMapper;
     private final PasswordEncoder passwordEncoder;
+    private final Object idLock = new Object();
 
     public UserService(UserMapper userMapper, RoleMapper roleMapper, PasswordEncoder passwordEncoder) {
         this.userMapper = userMapper;
         this.roleMapper = roleMapper;
         this.passwordEncoder = passwordEncoder;
+    }
+
+    /**
+     * 获取下一个可用的用户ID（填补删除后的空缺，保证ID连续）
+     * 线程安全：使用 synchronized 防止并发分配同一ID
+     */
+    public Long nextUserId() {
+        synchronized (idLock) {
+            return userMapper.findMinAvailableId();
+        }
     }
 
     @Transactional
@@ -46,6 +57,7 @@ public class UserService {
         }
 
         User user = new User();
+        user.setId(nextUserId());
         user.setUsername(form.getUsername());
         user.setPassword(passwordEncoder.encode(form.getPassword()));
         user.setEmail(form.getEmail());
