@@ -8,7 +8,7 @@
         </el-form-item>
         <el-form-item label="品种" prop="breedId">
           <el-select v-model="form.breedId" placeholder="请选择品种">
-            <el-option v-for="b in breeds" :key="b.id" :label="b.breedName" :value="b.id" />
+            <el-option v-for="b in breeds" :key="b.id" :label="getBreedDisplay(b.breedName)" :value="b.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="性别" prop="gender">
@@ -37,6 +37,13 @@
         <el-form-item label="领养要求">
           <el-input v-model="form.adoptionRequirement" type="textarea" :rows="2" placeholder="对领养人的要求" />
         </el-form-item>
+        <el-form-item v-if="isEdit" label="领养状态" prop="status">
+          <el-select v-model="form.status" placeholder="请选择状态">
+            <el-option label="可领养" value="available" />
+            <el-option label="已领养" value="adopted" />
+            <el-option label="待审核" value="pending" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="宠物图片">
           <div class="image-upload-area">
             <div v-for="(img, i) in form.images" :key="i" class="image-upload-item">
@@ -64,6 +71,7 @@ import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
+import { getBreedDisplay } from '@/utils/labels'
 import { createPet, updatePet, getAdminPetList } from '@/api/admin'
 import { getBreeds } from '@/api/breed'
 import { uploadFile } from '@/api/upload'
@@ -80,7 +88,10 @@ const breeds = ref([])
 const form = reactive({
   name: '', breedId: null, gender: '公', age: 0, weight: null,
   healthStatus: '', vaccineStatus: '', sterilizationStatus: '',
-  personality: '', adoptionRequirement: '', images: [], coverIndex: 0,
+  personality: '', adoptionRequirement: '', status: '',
+  existingImages: [],
+  newImages: [],
+  deleteImageIds: [],
 })
 
 const rules = {
@@ -106,6 +117,7 @@ onMounted(async () => {
         form.healthStatus = pet.healthStatus || ''; form.vaccineStatus = pet.vaccineStatus || ''
         form.sterilizationStatus = pet.sterilizationStatus || ''; form.personality = pet.personality || ''
         form.adoptionRequirement = pet.adoptionRequirement || ''
+        form.status = pet.status || ''
       }
     } catch {}
   }
@@ -146,6 +158,9 @@ async function handleSave() {
     fd.append('sterilizationStatus', form.sterilizationStatus || '')
     fd.append('personality', form.personality)
     fd.append('adoptionRequirement', form.adoptionRequirement || '')
+    if (isEdit.value && form.status) {
+      fd.append('status', form.status)
+    }
     fd.append('coverIndex', form.coverIndex)
     for (const img of form.images) {
       if (img.url) fd.append('imageUrls', img.url)
