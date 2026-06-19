@@ -43,7 +43,10 @@
 
         <template v-if="userStore.isLoggedIn">
           <el-menu-item index="logout" class="logout-item">
-            <span style="color: #909399;">{{ userStore.userInfo?.username }}</span>
+            <el-avatar :src="avatarSrc" :size="24" class="header-avatar">
+              <el-icon :size="14"><UserFilled /></el-icon>
+            </el-avatar>
+            <span style="color: #909399; margin-left: 6px;">{{ userStore.userInfo?.username }}</span>
             &nbsp;退出
           </el-menu-item>
         </template>
@@ -56,10 +59,14 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { getImageUrl } from '@/utils/imageUrl'
+import { UserFilled } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+
+const avatarSrc = computed(() => getImageUrl(userStore.userInfo?.avatarUrl))
 
 const activeRoute = computed(() => {
   if (route.path.startsWith('/admin')) return route.path
@@ -110,5 +117,9 @@ function handleSelect(index) {
 
 .logout-item {
   color: #909399;
+}
+
+.header-avatar {
+  flex-shrink: 0;
 }
 </style>
