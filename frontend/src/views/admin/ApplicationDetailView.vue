@@ -11,8 +11,8 @@
           <el-descriptions-item label="申请人邮箱">{{ detail.user?.email }}</el-descriptions-item>
           <el-descriptions-item label="申请时间">{{ formatDate(detail.application?.createdAt) }}</el-descriptions-item>
           <el-descriptions-item label="状态">
-            <el-tag :type="statusType(detail.application?.status)" size="small">
-              {{ statusLabel(detail.application?.status) }}
+            <el-tag :type="getAppStatusTagType(detail.application?.status)" size="small">
+              {{ getAppStatusDisplay(detail.application?.status) }}
             </el-tag>
           </el-descriptions-item>
         </el-descriptions>
@@ -22,6 +22,15 @@
         <div v-if="detail.application?.status === 'pending'" class="review-actions">
           <el-button type="success" size="large" @click="handleApprove">通过</el-button>
           <el-button type="danger" size="large" @click="showRejectDialog = true">拒绝</el-button>
+          <el-button
+            v-if="detail.application?.status !== 'approved'"
+            type="danger"
+            size="large"
+            plain
+            @click="handleDelete"
+          >
+            <el-icon><Delete /></el-icon> 删除记录
+          </el-button>
         </div>
       </div>
     </div>
@@ -40,7 +49,9 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getAppDetail, approveApp, rejectApp } from '@/api/admin'
+import { Check, Close, ArrowLeft, Delete } from '@element-plus/icons-vue'
+import { getAppDetail, approveApp, rejectApp, deleteApp } from '@/api/admin'
+import { getAppStatusDisplay, getAppStatusTagType } from '@/utils/labels'
 
 const route = useRoute()
 const router = useRouter()
@@ -71,8 +82,19 @@ async function handleReject() {
   } catch {} finally { rejecting.value = false }
 }
 
-function statusType(s) { return { pending: 'warning', approved: 'success', rejected: 'danger', cancelled: 'info' }[s] || 'info' }
-function statusLabel(s) { return { pending: '待审核', approved: '已通过', rejected: '已拒绝', cancelled: '已取消' }[s] || s }
+async function handleDelete() {
+  try {
+    await ElMessageBox.confirm(
+      '确定要删除此审核记录吗？此操作不可恢复。',
+      '确认删除',
+      { type: 'warning', confirmButtonText: '确定删除' }
+    )
+    await deleteApp(route.params.id)
+    ElMessage.success('已删除')
+    router.push('/admin/applications')
+  } catch {}
+}
+
 function formatDate(d) { return d ? new Date(d).toLocaleString('zh-CN') : '-' }
 </script>
 
