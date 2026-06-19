@@ -11,7 +11,10 @@ export const useUserStore = defineStore('user', () => {
 
   // Getters
   const isLoggedIn = computed(() => !!token.value && !!userInfo.value)
-  const isAdmin = computed(() => userInfo.value?.roles?.includes('ADMIN') ?? false)
+  const isAdmin = computed(() => {
+    const roles = userInfo.value?.roles ?? []
+    return roles.some(r => r === 'ADMIN' || r === 'ROLE_ADMIN')
+  })
 
   // Link token to request interceptor
   setUserStore({ token, logout, isLoggedIn, isAdmin })
