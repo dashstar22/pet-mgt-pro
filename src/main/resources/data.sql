@@ -12,19 +12,19 @@ INSERT IGNORE INTO user_role (user_id, role_id) VALUES (1, 2);
 INSERT IGNORE INTO user_role (user_id, role_id) VALUES (2, 1);
 
 INSERT IGNORE INTO pet_breed (breed_name, pet_type) VALUES
-('British Shorthair', '猫'),
-('Persian', '猫'),
-('Siamese', '猫'),
-('Maine Coon', '猫'),
-('Ragdoll', '猫'),
-('Golden Retriever', '狗'),
-('Corgi', '狗'),
-('Husky', '狗'),
-('Labrador', '狗'),
-('Poodle', '狗'),
-('Holland Lop', '兔'),
-('Netherland Dwarf', '兔'),
-('Mini Rex', '兔');
+('英短', '猫'),
+('波斯', '猫'),
+('暹罗', '猫'),
+('缅因', '猫'),
+('布偶', '猫'),
+('金毛', '狗'),
+('柯基', '狗'),
+('哈士奇', '狗'),
+('拉布拉多', '狗'),
+('贵宾', '狗'),
+('荷兰垂耳兔', '兔'),
+('荷兰侏儒兔', '兔'),
+('迷你雷克斯兔', '兔');
 
 INSERT IGNORE INTO pet (name, breed_id, gender, age, weight, health_status, vaccine_status, sterilization_status, personality, adoption_requirement, status, created_by)
 VALUES
