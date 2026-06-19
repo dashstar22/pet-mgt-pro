@@ -17,15 +17,21 @@
         <el-table-column prop="applicantUsername" label="申请人" />
         <el-table-column prop="status" label="状态" width="80">
           <template #default="{ row }">
-            <el-tag :type="statusType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
+            <el-tag :type="getAppStatusTagType(row.status)" size="small">{{ getAppStatusDisplay(row.status) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="createdAt" label="申请时间">
           <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="80">
+        <el-table-column label="操作" width="140" fixed="right">
           <template #default="{ row }">
             <el-button size="small" @click.stop="goDetail(row)">审核</el-button>
+            <el-button
+              v-if="row.status !== 'approved'"
+              size="small"
+              type="danger"
+              @click.stop="handleDelete(row)"
+            >删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -37,7 +43,9 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getAppList } from '@/api/admin'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { getAppList, deleteApp } from '@/api/admin'
+import { getAppStatusDisplay, getAppStatusTagType } from '@/utils/labels'
 import Pagination from '@/components/Pagination.vue'
 
 const router = useRouter()
@@ -61,8 +69,18 @@ async function loadData() {
 
 function handleFilter() { page.value = 1; loadData() }
 function goDetail(row) { router.push(`/admin/applications/${row.id}`) }
-function statusType(s) { const m = { pending: 'warning', approved: 'success', rejected: 'danger', cancelled: 'info' }; return m[s] || 'info' }
-function statusLabel(s) { const m = { pending: '待审核', approved: '已通过', rejected: '已拒绝', cancelled: '已取消' }; return m[s] || s }
+async function handleDelete(row) {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除「${row.petName}」的审核记录吗？此操作不可恢复。`,
+      '确认删除',
+      { type: 'warning', confirmButtonText: '确定删除' }
+    )
+    await deleteApp(row.id)
+    ElMessage.success('已删除')
+    loadData()
+  } catch {}
+}
 function formatDate(d) { return d ? new Date(d).toLocaleDateString('zh-CN') : '-' }
 
 onMounted(loadData)
