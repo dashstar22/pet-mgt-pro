@@ -11,3 +11,7 @@ node_modules/
 dist/
 .superpowers/
 .claude/
+docs/superpowers/
+*.docx
+cookies*.txt
+docx_*.txt
