@@ -28,7 +28,7 @@
       <!-- Info -->
       <div class="detail-info">
         <h1 class="detail-name">{{ pet.name }}</h1>
-        <p class="detail-breed">{{ pet.breedName || '未知品种' }}</p>
+        <p class="detail-breed">{{ getBreedDisplay(pet.breedName) }}</p>
 
         <el-descriptions :column="1" border class="detail-desc">
           <el-descriptions-item label="性别">{{ pet.gender }}</el-descriptions-item>
@@ -40,8 +40,8 @@
           <el-descriptions-item label="性格">{{ pet.personality }}</el-descriptions-item>
           <el-descriptions-item label="领养要求" v-if="pet.adoptionRequirement">{{ pet.adoptionRequirement }}</el-descriptions-item>
           <el-descriptions-item label="状态">
-            <el-tag :type="pet.status === 'available' ? 'success' : 'warning'">
-              {{ pet.status === 'available' ? '可领养' : pet.status }}
+            <el-tag :type="getPetStatusTagType(pet.status)">
+              {{ getPetStatusDisplay(pet.status) }}
             </el-tag>
           </el-descriptions-item>
         </el-descriptions>
@@ -75,6 +75,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getPetDetail, getPetImages } from '@/api/pet'
 import { useUserStore } from '@/stores/user'
+import { getBreedDisplay, getPetStatusDisplay, getPetStatusTagType } from '@/utils/labels'
 
 const route = useRoute()
 const userStore = useUserStore()
