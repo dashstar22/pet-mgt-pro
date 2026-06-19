@@ -47,6 +47,10 @@ export function deletePet(id) {
   return request.delete(`/admin/pets/${id}`)
 }
 
+export function updatePetStatus(id, status) {
+  return request.patch(`/admin/pets/${id}/status`, null, { params: { status } })
+}
+
 // Breed management
 export function getAdminBreedList(params) {
   return request.get('/admin/breeds', { params })

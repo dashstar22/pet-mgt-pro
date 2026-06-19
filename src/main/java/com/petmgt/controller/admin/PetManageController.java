@@ -158,6 +158,22 @@ public class PetManageController {
         return ApiResponse.success("删除成功", null);
     }
 
+    @PatchMapping("/{id}/status")
+    public ApiResponse<Void> updateStatus(
+            @PathVariable Long id,
+            @RequestParam("status") String status) {
+        if (!List.of("available", "adopted", "pending").contains(status)) {
+            return ApiResponse.error(400, "无效的状态值，有效值为: available, adopted, pending");
+        }
+        Pet pet = petMapper.selectById(id);
+        if (pet == null) {
+            return ApiResponse.error(404, "宠物不存在");
+        }
+        pet.setStatus(status);
+        petMapper.updateById(pet);
+        return ApiResponse.success("状态更新成功", null);
+    }
+
     private void saveImages(Long petId, List<MultipartFile> images, Integer coverIndex) throws java.io.IOException {
         for (int i = 0; i < images.size(); i++) {
             MultipartFile file = images.get(i);
