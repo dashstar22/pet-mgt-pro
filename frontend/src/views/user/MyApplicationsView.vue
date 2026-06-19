@@ -7,7 +7,7 @@
         <el-table-column prop="breedName" label="品种" />
         <el-table-column prop="status" label="状态">
           <template #default="{ row }">
-            <el-tag :type="statusType(row.status)">{{ statusLabel(row.status) }}</el-tag>
+            <el-tag :type="getAppStatusTagType(row.status)">{{ getAppStatusDisplay(row.status) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="createdAt" label="申请时间">
@@ -43,6 +43,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { myList, cancel, deleteApp } from '@/api/application'
+import { getAppStatusDisplay, getAppStatusTagType } from '@/utils/labels'
 import Pagination from '@/components/Pagination.vue'
 
 const applications = ref([])
@@ -87,16 +88,6 @@ async function handleDelete(row) {
   } catch {
     // cancelled or error
   }
-}
-
-function statusType(status) {
-  const map = { pending: 'warning', approved: 'success', rejected: 'danger', cancelled: 'info' }
-  return map[status] || 'info'
-}
-
-function statusLabel(status) {
-  const map = { pending: '待审核', approved: '已通过', rejected: '已拒绝', cancelled: '已取消' }
-  return map[status] || status
 }
 
 function formatDate(dateStr) {
