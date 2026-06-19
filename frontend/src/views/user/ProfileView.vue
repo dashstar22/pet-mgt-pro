@@ -5,7 +5,14 @@
       <!-- Avatar -->
       <div class="profile-section">
         <h3>头像</h3>
-        <FileUpload v-model="avatarUrl" />
+        <div class="avatar-area">
+          <el-avatar :src="avatarPreviewUrl" :size="80" class="profile-avatar">
+            <el-icon :size="40"><UserFilled /></el-icon>
+          </el-avatar>
+          <div class="avatar-upload">
+            <FileUpload v-model="avatarUrl" />
+          </div>
+        </div>
       </div>
 
       <!-- Basic Info -->
@@ -47,15 +54,18 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, computed } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import FileUpload from '@/components/FileUpload.vue'
+import { getImageUrl } from '@/utils/imageUrl'
+import { UserFilled } from '@element-plus/icons-vue'
 
 const userStore = useUserStore()
 
 // Avatar
 const avatarUrl = ref(userStore.userInfo?.avatarUrl || '')
+const avatarPreviewUrl = computed(() => getImageUrl(avatarUrl.value))
 
 // Info form
 const infoLoading = ref(false)
@@ -143,6 +153,20 @@ async function savePassword() {
   font-size: 16px;
   padding-bottom: 12px;
   border-bottom: 1px solid #ebeef5;
+}
+
+.avatar-area {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.profile-avatar {
+  flex-shrink: 0;
+}
+
+.avatar-upload {
+  flex: 1;
 }
 
 .profile-form {
