@@ -6,12 +6,12 @@
     </div>
     <div class="pet-card-body">
       <h3 class="pet-card-name">{{ pet.name }}</h3>
-      <p class="pet-card-breed">{{ pet.breedName || '未知品种' }}</p>
+      <p class="pet-card-breed">{{ getBreedDisplay(pet.breedName) }}</p>
       <div class="pet-card-tags">
         <el-tag size="small">{{ pet.gender }}</el-tag>
         <el-tag size="small" type="info">{{ pet.age }}岁</el-tag>
-        <el-tag size="small" :type="pet.status === 'available' ? 'success' : 'warning'">
-          {{ pet.status === 'available' ? '可领养' : pet.status }}
+        <el-tag size="small" :type="getPetStatusTagType(pet.status)">
+          {{ getPetStatusDisplay(pet.status) }}
         </el-tag>
       </div>
     </div>
@@ -20,6 +20,7 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
+import { getBreedDisplay, getPetStatusDisplay, getPetStatusTagType } from '@/utils/labels'
 
 const props = defineProps({
   pet: { type: Object, required: true },
