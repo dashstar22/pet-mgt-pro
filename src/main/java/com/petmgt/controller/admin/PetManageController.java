@@ -73,6 +73,7 @@ public class PetManageController {
             @RequestParam("personality") String personality,
             @RequestParam(value = "adoptionRequirement", required = false) String adoptionRequirement,
             @RequestParam(value = "images", required = false) List<MultipartFile> images,
+            @RequestParam(value = "imageUrls", required = false) List<String> imageUrls,
             @RequestParam(value = "coverIndex", defaultValue = "0") Integer coverIndex) throws IOException {
 
         Pet pet = new Pet();
@@ -90,8 +91,13 @@ public class PetManageController {
         pet.setCreatedBy(SecurityUtil.getCurrentUser().getId());
         petMapper.insert(pet);
 
+        // images: MultipartFile list (files sent directly from frontend)
         if (images != null && !images.isEmpty()) {
             saveImages(pet.getId(), images, coverIndex);
+        }
+        // imageUrls: filenames already uploaded via /api/upload (frontend upload-then-submit pattern)
+        if (imageUrls != null && !imageUrls.isEmpty()) {
+            saveImagesFromUrls(pet.getId(), imageUrls, coverIndex);
         }
         return ApiResponse.success("发布成功", null);
     }
@@ -111,6 +117,7 @@ public class PetManageController {
             @RequestParam(value = "adoptionRequirement", required = false) String adoptionRequirement,
             @RequestParam(value = "status", required = false) String status,
             @RequestParam(value = "images", required = false) List<MultipartFile> images,
+            @RequestParam(value = "imageUrls", required = false) List<String> imageUrls,
             @RequestParam(value = "coverIndex", defaultValue = "0") Integer coverIndex,
             @RequestParam(value = "deleteImageIds", required = false) List<Long> deleteImageIds) throws IOException {
 
@@ -142,6 +149,9 @@ public class PetManageController {
         }
         if (images != null && !images.isEmpty()) {
             saveImages(id, images, coverIndex);
+        }
+        if (imageUrls != null && !imageUrls.isEmpty()) {
+            saveImagesFromUrls(id, imageUrls, coverIndex);
         }
         return ApiResponse.success("更新成功", null);
     }
@@ -182,6 +192,18 @@ public class PetManageController {
             PetImage petImage = new PetImage();
             petImage.setPetId(petId);
             petImage.setImageUrl(filename);
+            petImage.setIsCover(i == coverIndex ? 1 : 0);
+            petImageMapper.insert(petImage);
+        }
+    }
+
+    private void saveImagesFromUrls(Long petId, List<String> imageUrls, Integer coverIndex) {
+        for (int i = 0; i < imageUrls.size(); i++) {
+            String url = imageUrls.get(i);
+            if (url == null || url.isEmpty()) continue;
+            PetImage petImage = new PetImage();
+            petImage.setPetId(petId);
+            petImage.setImageUrl(url);
             petImage.setIsCover(i == coverIndex ? 1 : 0);
             petImageMapper.insert(petImage);
         }
